@@ -1,36 +1,43 @@
 const http = require('http');
 
-function Server() {
-  this.routes = [];
-  this.notFound = null;
-}
+class Server {
+  constructor() {
+    this.routes = { GET: {} };
+    this.notFound = null;
+  }
 
-Server.prototype.get = function (url, cb) {
-  this.routes.push({ url, method: 'GET', handler: cb });
-};
+  get(url, cb) {
+    this.routes.GET[url] = { handler: cb };
+  }
 
-Server.prototype.listen = function (port = 8080) {
-  http
-    .createServer((req, res) => {
-      console.time('Transaction');
-      // Atau routesnya object biar lebih cepat
-      const route = this.routes.find(
-        (route) => req.method == route.method && req.url == route.url
-      );
-      if (route) {
-        route.handler(req, res);
-      } else {
-        if (typeof this.notFound == 'function') {
-          this.notFound(req, res);
-        } else {
-          res.end('404 Not Found');
+  listen(port = 8080) {
+    http
+      .createServer((req, res) => {
+        console.time();
+        try {
+          const route = this.routes[req.method][req.url];
+          if (route) {
+            route.handler(req, res);
+          } else {
+            if (typeof this.notFound == 'function') {
+              this.notFound(req, res);
+            } else {
+              res.end('404 Not Found');
+            }
+          }
+        } catch (err) {
+          res.end(
+            `${
+              req.method + req.url
+            }\nOps, something error may server doesnt support this http method.`
+          );
         }
-      }
-      console.timeEnd('Transaction');
-    })
-    .listen(port);
-  console.log(`App listening at http://localhost:${port}`);
-};
+        console.timeEnd();
+      })
+      .listen(port);
+    console.log(`App listening at http://localhost:${port}`);
+  }
+}
 
 const app = new Server();
 
