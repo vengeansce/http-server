@@ -4,8 +4,8 @@
   "description": "HTTP server framework",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node example",
+    "dev": "nodemon example"
   },
   "repository": "https://github.com/vengeansce/http-server.git",
   "author": "vengeansce <andreasluhut2911@gmail.com>",
