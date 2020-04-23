@@ -1,7 +1,9 @@
 const http = require('http');
 const EventEmitter = require('events');
 
-function astro() {
+const defaultParams = { baseURL: '' };
+
+function astro(config = defaultParams) {
   const routes = {};
 
   class Server extends EventEmitter {
@@ -10,8 +12,8 @@ function astro() {
         .createServer((req, res) => {
           const method = routes[req.method];
           if (method) {
-            const route = routes[req.method][req.url];
-            if (route) route.handler(req, res);
+            const route = method[req.url];
+            if (route) route.handler(req, _res(res));
             else {
               const emit404 = this.emit('404', req, res);
               if (!emit404) {
@@ -35,11 +37,36 @@ function astro() {
   http.METHODS.forEach((method) => {
     routes[method] = {};
     Server.prototype[method.toLowerCase()] = function (url, cb) {
-      routes[method][url] = { handler: cb };
+      routes[method][config.baseURL + url] = { handler: cb };
     };
   });
 
   return new Server();
 }
+
+const _res = (res) => ({
+  ...res,
+  send(data, config) {
+    if (typeof data == 'object') {
+      let body;
+      if (data instanceof Error) {
+        body = {
+          message: data.message,
+          code: 400,
+          status: 'error',
+          result: null,
+        };
+      } else {
+        body = { message: null, code: 200, status: 'ok', result: data };
+      }
+      body = { ...body, ...config };
+      res.writeHead(body.code, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(body));
+    } else {
+      res.end(data);
+    }
+    return res;
+  },
+});
 
 module.exports = astro;
