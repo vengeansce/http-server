@@ -1,5 +1,6 @@
 const http = require('http');
 const EventEmitter = require('events');
+const qs = require('querystring');
 
 const defaultParams = { baseURL: '' };
 
@@ -13,8 +14,19 @@ function astro(config = defaultParams) {
           const method = routes[req.method];
           if (method) {
             const route = method[req.url];
-            if (route) route.handler(req, _res(res));
-            else {
+            if (route) {
+              let body = [];
+
+              req.on('data', (chunk) => {
+                body.push(chunk);
+              });
+
+              req.on('end', () => {
+                req.body = qs.parse(Buffer.concat(body).toString());
+                route.handler(req, _res(res));
+              });
+            } else {
+              res.statusCode = 404;
               const emit404 = this.emit('404', req, res);
               if (!emit404) {
                 res.end('404 Not Found');
@@ -51,7 +63,7 @@ const _res = (res) => ({
       let body;
       if (data instanceof Error) {
         body = {
-          message: data.message,
+          message: data.message || http.STATUS_CODES[400],
           code: 400,
           status: 'error',
           result: null,
